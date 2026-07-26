@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	HTTPPort int
+	HTTPPort    int
+	DatabaseURL string
 }
 
 func Load() (Config, error) {
@@ -16,6 +17,8 @@ func Load() (Config, error) {
 
 	port := os.Getenv("HTTP_PORT")
 	defaultPort := "8080"
+
+	databaseURL := os.Getenv("DATABASE_URL")
 
 	if port == "" {
 		port = defaultPort
@@ -31,7 +34,12 @@ func Load() (Config, error) {
 		return Config{}, errors.New("incorrect http port")
 	}
 
+	if databaseURL == "" {
+		return Config{}, errors.New("incorrect database url")
+	}
+
 	config.HTTPPort = parsedPort
+	config.DatabaseURL = databaseURL
 
 	return config, nil
 }
