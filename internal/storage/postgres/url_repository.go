@@ -7,6 +7,7 @@ import (
 
 	"github.com/artemkamyshenkov/url-shortener-api/internal/shortener"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -22,12 +23,18 @@ func NewURLRepository(pool *pgxpool.Pool) *URLRepository {
 
 func (r *URLRepository) Create(ctx context.Context, originalURL, shortCode string) (shortener.URL, error) {
 	var createdURL shortener.URL
+	var pgErr *pgconn.PgError
 
 	query := `INSERT INTO urls (original_url, short_code)
 						VALUES ($1, $2)
 						RETURNING id, original_url, short_code, created_at`
 	row := r.pool.QueryRow(ctx, query, originalURL, shortCode)
 	err := row.Scan(&createdURL.ID, &createdURL.OriginalURL, &createdURL.ShortCode, &createdURL.CreatedAt)
+
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" &&
+		pgErr.ConstraintName == "urls_short_code_key" {
+		return shortener.URL{}, shortener.ErrConflict
+	}
 
 	if err != nil {
 		return shortener.URL{}, fmt.Errorf("create short URL: %w", err)
