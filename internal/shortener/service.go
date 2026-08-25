@@ -94,3 +94,23 @@ func (s *Service) Create(ctx context.Context, rawURL string) (URL, error) {
 
 	return URL{}, ErrCreateAttemptsExhausted
 }
+
+func (s *Service) GetByShortCode(ctx context.Context, shortCode string) (URL, error) {
+	foundURL, err := s.repo.GetByShortCode(ctx, shortCode)
+
+	if err != nil {
+		return URL{}, fmt.Errorf("get short URL: %w", err)
+	}
+
+	return foundURL, nil
+}
+
+func (s *Service) DeleteByShortCode(ctx context.Context, shortCode string) error {
+	err := s.repo.DeleteByShortCode(ctx, shortCode)
+
+	if err != nil {
+		return fmt.Errorf("delete short URL: %w", err)
+	}
+
+	return nil
+}
