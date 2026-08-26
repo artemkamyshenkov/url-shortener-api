@@ -11,7 +11,7 @@ func TestHealth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
 
-	NewRouter().ServeHTTP(rec, req)
+	NewRouter(nil).ServeHTTP(rec, req)
 
 	resp := rec.Result()
 	defer resp.Body.Close()

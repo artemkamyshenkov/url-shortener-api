@@ -10,6 +10,7 @@ import (
 type Config struct {
 	HTTPPort    int
 	DatabaseURL string
+	BaseURL     string
 }
 
 func Load() (Config, error) {
@@ -19,7 +20,7 @@ func Load() (Config, error) {
 	defaultPort := "8080"
 
 	databaseURL := os.Getenv("DATABASE_URL")
-
+	baseURL := os.Getenv("BASE_URL")
 	if port == "" {
 		port = defaultPort
 	}
@@ -38,8 +39,13 @@ func Load() (Config, error) {
 		return Config{}, errors.New("incorrect database url")
 	}
 
+	if baseURL == "" {
+		return Config{}, errors.New("incorrect base url")
+	}
+
 	config.HTTPPort = parsedPort
 	config.DatabaseURL = databaseURL
+	config.BaseURL = baseURL
 
 	return config, nil
 }

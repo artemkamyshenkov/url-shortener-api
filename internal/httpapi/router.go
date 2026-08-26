@@ -6,11 +6,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(handler *Handler) http.Handler {
 	mux := chi.NewRouter()
 
 	mux.Get("/health", HealthHandler)
+	mux.Post("/api/v1/urls", handler.CreateHandler)
 
 	return mux
-
 }

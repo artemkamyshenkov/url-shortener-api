@@ -8,6 +8,8 @@ import (
 
 	"github.com/artemkamyshenkov/url-shortener-api/internal/config"
 	"github.com/artemkamyshenkov/url-shortener-api/internal/httpapi"
+	"github.com/artemkamyshenkov/url-shortener-api/internal/shortener"
+	"github.com/artemkamyshenkov/url-shortener-api/internal/storage/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,7 +39,13 @@ func main() {
 	cancel()
 	defer pool.Close()
 
-	mux := httpapi.NewRouter()
+	repository := postgres.NewURLRepository(pool)
+	generator := &shortener.RandomCodeGenerator{}
+
+	service := shortener.NewService(repository, generator, 6, 5)
+	handler := httpapi.NewHandler(service, cfg.BaseURL)
+
+	mux := httpapi.NewRouter(handler)
 
 	address := fmt.Sprintf(":%d", cfg.HTTPPort)
 
