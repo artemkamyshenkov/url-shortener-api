@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/artemkamyshenkov/url-shortener-api/internal/shortener"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -31,34 +32,19 @@ func (h *Handler) CreateHandler(w http.ResponseWriter,
 	var request createURLRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "invalid request body",
-		})
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	createdURL, err := h.service.Create(r.Context(), request.URL)
 
 	if errors.Is(err, shortener.ErrInvalidURL) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "invalid URL",
-		})
-
+		writeJSONError(w, http.StatusBadRequest, "invalid URL")
 		return
 	}
 
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "internal server error",
-		})
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -74,4 +60,69 @@ func (h *Handler) CreateHandler(w http.ResponseWriter,
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
 
+}
+
+func (h *Handler) GetURLByShortCode(w http.ResponseWriter,
+	r *http.Request) {
+	shortCode := chi.URLParam(r, "shortCode")
+
+	data, err := h.service.GetByShortCode(r.Context(), shortCode)
+
+	if errors.Is(err, shortener.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "URL not found")
+		return
+	}
+
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response := urlResponse{ID: data.ID,
+		URL:       data.OriginalURL,
+		ShortCode: data.ShortCode,
+		ShortURL:  h.baseURL + "/" + data.ShortCode,
+		CreatedAt: data.CreatedAt}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) RedirectByShortCode(w http.ResponseWriter,
+	r *http.Request) {
+	shortCode := chi.URLParam(r, "shortCode")
+
+	data, err := h.service.GetByShortCode(r.Context(), shortCode)
+
+	if errors.Is(err, shortener.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "URL not found")
+		return
+	}
+
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	http.Redirect(w, r, data.OriginalURL, http.StatusFound)
+}
+
+func (h *Handler) DeleteByShortCode(w http.ResponseWriter,
+	r *http.Request) {
+	shortCode := chi.URLParam(r, "shortCode")
+
+	err := h.service.DeleteByShortCode(r.Context(), shortCode)
+
+	if errors.Is(err, shortener.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "URL not found")
+		return
+	}
+
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
