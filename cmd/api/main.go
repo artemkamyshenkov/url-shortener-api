@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/artemkamyshenkov/url-shortener-api/internal/config"
@@ -51,6 +55,10 @@ func main() {
 
 	fmt.Println("Server listening on: ", address)
 
+	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
+	defer stop()
+
 	serveErrCh := make(chan error, 1)
 
 	server := &http.Server{
@@ -62,9 +70,23 @@ func main() {
 		serveErrCh <- server.ListenAndServe()
 	}()
 
-	if err := <-serveErrCh; err != nil {
-		fmt.Println("Error start server", err)
+	select {
+	case err := <-serveErrCh:
+		if errors.Is(err, http.ErrServerClosed) {
+			fmt.Println("server closed:", err)
+			return
+		}
+		fmt.Println("server error:", err)
 		panic(err)
+	case <-signalCtx.Done():
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		err := server.Shutdown(shutdownCtx)
+
+		if err != nil {
+			fmt.Println("shutdown error:", err)
+		}
+
 	}
 
 }
