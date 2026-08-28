@@ -69,7 +69,7 @@ func (h *Handler) GetURLByShortCode(w http.ResponseWriter,
 	data, err := h.service.GetByShortCode(r.Context(), shortCode)
 
 	if errors.Is(err, shortener.ErrNotFound) {
-		writeJSONError(w, http.StatusNotFound, "URL not found")
+		writeJSONError(w, http.StatusNotFound, "short URL not found")
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *Handler) RedirectByShortCode(w http.ResponseWriter,
 	data, err := h.service.GetByShortCode(r.Context(), shortCode)
 
 	if errors.Is(err, shortener.ErrNotFound) {
-		writeJSONError(w, http.StatusNotFound, "URL not found")
+		writeJSONError(w, http.StatusNotFound, "short URL not found")
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *Handler) DeleteByShortCode(w http.ResponseWriter,
 	err := h.service.DeleteByShortCode(r.Context(), shortCode)
 
 	if errors.Is(err, shortener.ErrNotFound) {
-		writeJSONError(w, http.StatusNotFound, "URL not found")
+		writeJSONError(w, http.StatusNotFound, "short URL not found")
 		return
 	}
 
