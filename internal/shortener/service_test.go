@@ -35,6 +35,10 @@ func (r *fakeRepository) DeleteByShortCode(ctx context.Context, shortCode string
 	return r.deleteErr
 }
 
+func (r *fakeRepository) RecordClick(ctx context.Context, shortCode string) error {
+	return nil
+}
+
 func TestService_Create(t *testing.T) {
 	repo := &fakeRepository{
 		createResult: URL{

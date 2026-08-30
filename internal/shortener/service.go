@@ -12,6 +12,7 @@ type Repository interface {
 	Create(ctx context.Context, originalURL, shortCode string) (URL, error)
 	GetByShortCode(ctx context.Context, shortCode string) (URL, error)
 	DeleteByShortCode(ctx context.Context, shortCode string) error
+	RecordClick(ctx context.Context, shortCode string) error
 }
 
 type CodeGenerator interface {
@@ -113,4 +114,30 @@ func (s *Service) DeleteByShortCode(ctx context.Context, shortCode string) error
 	}
 
 	return nil
+}
+
+func (s *Service) RecordClickByShortCode(ctx context.Context, shortCode string) error {
+	err := s.repo.RecordClick(ctx, shortCode)
+
+	if err != nil {
+		return fmt.Errorf("record click short URL: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) ResolveByShortCode(ctx context.Context, shortCode string) (URL, error) {
+	url, err := s.GetByShortCode(ctx, shortCode)
+
+	if err != nil {
+		return URL{}, err
+	}
+
+	err = s.RecordClickByShortCode(ctx, shortCode)
+
+	if err != nil {
+		return URL{}, err
+	}
+
+	return url, nil
 }

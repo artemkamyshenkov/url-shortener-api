@@ -46,9 +46,9 @@ func (r *URLRepository) Create(ctx context.Context, originalURL, shortCode strin
 func (r *URLRepository) GetByShortCode(ctx context.Context, shortCode string) (shortener.URL, error) {
 	var url shortener.URL
 
-	query := `SELECT id, original_url, short_code, created_at FROM urls WHERE short_code = $1`
+	query := `SELECT id, original_url, short_code, created_at, clicks, last_accessed_at FROM urls WHERE short_code = $1`
 	row := r.pool.QueryRow(ctx, query, shortCode)
-	err := row.Scan(&url.ID, &url.OriginalURL, &url.ShortCode, &url.CreatedAt)
+	err := row.Scan(&url.ID, &url.OriginalURL, &url.ShortCode, &url.CreatedAt, &url.Clicks, &url.LastAccessedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return shortener.URL{}, shortener.ErrNotFound
@@ -67,6 +67,27 @@ func (r *URLRepository) DeleteByShortCode(ctx context.Context, shortCode string)
 
 	if err != nil {
 		return fmt.Errorf("delete URL by short code: %w", err)
+	}
+
+	rowsAffected := result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return shortener.ErrNotFound
+	}
+
+	return nil
+}
+
+func (r *URLRepository) RecordClick(ctx context.Context, shortCode string) error {
+	query := `UPDATE urls
+						SET clicks = clicks + 1,
+    				last_accessed_at = NOW()
+						WHERE short_code = $1;`
+
+	result, err := r.pool.Exec(ctx, query, shortCode)
+
+	if err != nil {
+		return fmt.Errorf("update URL by short code: %w", err)
 	}
 
 	rowsAffected := result.RowsAffected()

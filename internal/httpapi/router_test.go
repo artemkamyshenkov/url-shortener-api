@@ -40,6 +40,10 @@ func (r *fakeRepository) DeleteByShortCode(ctx context.Context, shortCode string
 	return r.deleteErr
 }
 
+func (r *fakeRepository) RecordClick(ctx context.Context, shortCode string) error {
+	return nil
+}
+
 func TestHealth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()

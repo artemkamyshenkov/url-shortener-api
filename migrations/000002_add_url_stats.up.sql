@@ -1,0 +1,4 @@
+ALTER TABLE urls
+    ADD COLUMN clicks BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN last_accessed_at TIMESTAMPTZ;
+    

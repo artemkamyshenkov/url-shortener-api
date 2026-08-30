@@ -11,6 +11,7 @@ func NewRouter(handler *Handler) http.Handler {
 
 	mux.Get("/health", HealthHandler)
 	mux.Post("/api/v1/urls", handler.CreateHandler)
+	mux.Get("/api/v1/urls/{shortCode}/stats", handler.GetURLStatsByShortCode)
 	mux.Get("/api/v1/urls/{shortCode}", handler.GetURLByShortCode)
 	mux.Get("/{shortCode}", handler.RedirectByShortCode)
 	mux.Delete("/api/v1/urls/{shortCode}", handler.DeleteByShortCode)

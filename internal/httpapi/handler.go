@@ -93,7 +93,7 @@ func (h *Handler) RedirectByShortCode(w http.ResponseWriter,
 	r *http.Request) {
 	shortCode := chi.URLParam(r, "shortCode")
 
-	data, err := h.service.GetByShortCode(r.Context(), shortCode)
+	data, err := h.service.ResolveByShortCode(r.Context(), shortCode)
 
 	if errors.Is(err, shortener.ErrNotFound) {
 		writeJSONError(w, http.StatusNotFound, "short URL not found")
@@ -125,4 +125,27 @@ func (h *Handler) DeleteByShortCode(w http.ResponseWriter,
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) GetURLStatsByShortCode(w http.ResponseWriter,
+	r *http.Request) {
+	shortCode := chi.URLParam(r, "shortCode")
+
+	data, err := h.service.GetByShortCode(r.Context(), shortCode)
+
+	if errors.Is(err, shortener.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "short URL not found")
+		return
+	}
+
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response := urlStatsResponse{ShortCode: data.ShortCode, Clicks: data.Clicks, LastAccessedAt: data.LastAccessedAt}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
