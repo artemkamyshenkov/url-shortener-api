@@ -11,6 +11,7 @@ type Config struct {
 	HTTPPort    int
 	DatabaseURL string
 	BaseURL     string
+	RedisAddr   string
 }
 
 func Load() (Config, error) {
@@ -21,6 +22,8 @@ func Load() (Config, error) {
 
 	databaseURL := os.Getenv("DATABASE_URL")
 	baseURL := os.Getenv("BASE_URL")
+	redisAddr := os.Getenv("REDIS_ADDR")
+
 	if port == "" {
 		port = defaultPort
 	}
@@ -43,9 +46,14 @@ func Load() (Config, error) {
 		return Config{}, errors.New("incorrect base url")
 	}
 
+	if redisAddr == "" {
+		return Config{}, errors.New("incorrect redis address")
+	}
+
 	config.HTTPPort = parsedPort
 	config.DatabaseURL = databaseURL
 	config.BaseURL = baseURL
+	config.RedisAddr = redisAddr
 
 	return config, nil
 }
