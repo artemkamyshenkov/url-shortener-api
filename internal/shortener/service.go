@@ -21,17 +21,19 @@ type CodeGenerator interface {
 
 type Service struct {
 	repo        Repository
+	cache       URLCache
 	generator   CodeGenerator
 	codeLength  int
 	maxAttempts int
 }
 
-func NewService(repo Repository,
+func NewService(repo Repository, cache URLCache,
 	generator CodeGenerator,
 	codeLength int,
 	maxAttempts int) *Service {
 	return &Service{
 		repo:        repo,
+		cache:       cache,
 		generator:   generator,
 		codeLength:  codeLength,
 		maxAttempts: maxAttempts,
@@ -113,6 +115,8 @@ func (s *Service) DeleteByShortCode(ctx context.Context, shortCode string) error
 		return fmt.Errorf("delete short URL: %w", err)
 	}
 
+	_ = s.cache.Delete(ctx, shortCode)
+
 	return nil
 }
 
@@ -127,6 +131,22 @@ func (s *Service) RecordClickByShortCode(ctx context.Context, shortCode string) 
 }
 
 func (s *Service) ResolveByShortCode(ctx context.Context, shortCode string) (URL, error) {
+	originalURL, cachedErr := s.cache.Get(ctx, shortCode)
+
+	if cachedErr == nil {
+		err := s.RecordClickByShortCode(ctx, shortCode)
+
+		if err != nil {
+			return URL{}, err
+		}
+
+		cachedURL := URL{
+			OriginalURL: originalURL,
+			ShortCode:   shortCode,
+		}
+		return cachedURL, nil
+	}
+
 	url, err := s.GetByShortCode(ctx, shortCode)
 
 	if err != nil {
@@ -138,6 +158,8 @@ func (s *Service) ResolveByShortCode(ctx context.Context, shortCode string) (URL
 	if err != nil {
 		return URL{}, err
 	}
+
+	_ = s.cache.Set(ctx, shortCode, url.OriginalURL)
 
 	return url, nil
 }

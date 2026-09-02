@@ -24,6 +24,20 @@ type fakeGenerator struct {
 	err  error
 }
 
+type fakeCache struct{}
+
+func (f *fakeCache) Get(ctx context.Context, shortCode string) (string, error) {
+	return "", shortener.ErrCacheMiss
+}
+
+func (f *fakeCache) Set(ctx context.Context, shortCode string, originalURL string) error {
+	return nil
+}
+
+func (f *fakeCache) Delete(ctx context.Context, shortCode string) error {
+	return nil
+}
+
 func (f *fakeGenerator) Generate(length int) (string, error) {
 	return f.code, f.err
 }
@@ -90,7 +104,10 @@ func TestCreateShortURL(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := shortener.NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := shortener.NewService(repo, cache, generator, 6, 5)
+
 	handler := NewHandler(service, "https://baseurl.com")
 
 	NewRouter(handler).ServeHTTP(rec, req)
@@ -147,7 +164,9 @@ func TestCreateShortURL_InvalidURL(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := shortener.NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := shortener.NewService(repo, cache, generator, 6, 5)
 	handler := NewHandler(service, "https://baseurl.com")
 
 	NewRouter(handler).ServeHTTP(rec, req)
@@ -191,7 +210,9 @@ func TestGetURLByShortCode(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := shortener.NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := shortener.NewService(repo, cache, generator, 6, 5)
 	handler := NewHandler(service, "https://baseurl.com")
 
 	NewRouter(handler).ServeHTTP(rec, req)
@@ -247,7 +268,9 @@ func TestRedirect(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := shortener.NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := shortener.NewService(repo, cache, generator, 6, 5)
 	handler := NewHandler(service, "https://baseurl.com")
 
 	NewRouter(handler).ServeHTTP(rec, req)
@@ -277,7 +300,9 @@ func TestDeleteURLByShortCode(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := shortener.NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := shortener.NewService(repo, cache, generator, 6, 5)
 	handler := NewHandler(service, "https://baseurl.com")
 
 	NewRouter(handler).ServeHTTP(rec, req)
@@ -307,7 +332,9 @@ func TestGetURLByShortCode_NotFound(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := shortener.NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := shortener.NewService(repo, cache, generator, 6, 5)
 	handler := NewHandler(service, "https://baseurl.com")
 
 	NewRouter(handler).ServeHTTP(rec, req)

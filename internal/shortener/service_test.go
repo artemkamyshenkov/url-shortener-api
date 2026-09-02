@@ -19,6 +19,20 @@ type fakeGenerator struct {
 	err  error
 }
 
+type fakeCache struct{}
+
+func (f *fakeCache) Get(ctx context.Context, shortCode string) (string, error) {
+	return "", ErrCacheMiss
+}
+
+func (f *fakeCache) Set(ctx context.Context, shortCode string, originalURL string) error {
+	return nil
+}
+
+func (f *fakeCache) Delete(ctx context.Context, shortCode string) error {
+	return nil
+}
+
 func (f *fakeGenerator) Generate(length int) (string, error) {
 	return f.code, f.err
 }
@@ -51,7 +65,9 @@ func TestService_Create(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := NewService(repo, generator, 6, 5)
+	cache := &fakeCache{}
+
+	service := NewService(repo, cache, generator, 6, 5)
 
 	result, err := service.Create(context.Background(), "https://example.com")
 
@@ -75,8 +91,9 @@ func TestService_CreateIncorrectRawURL(t *testing.T) {
 	generator := &fakeGenerator{
 		code: "abc123",
 	}
+	cache := &fakeCache{}
 
-	service := NewService(repo, generator, 6, 5)
+	service := NewService(repo, cache, generator, 6, 5)
 
 	_, err := service.Create(context.Background(), "example.com")
 
@@ -101,7 +118,9 @@ func TestService_GeneratorError(t *testing.T) {
 		err:  generatorErr,
 	}
 
-	service := NewService(repo, generator, 6, 5)
+	cache := &fakeCache{}
+
+	service := NewService(repo, cache, generator, 6, 5)
 
 	_, err := service.Create(context.Background(), "https://example.com")
 
@@ -119,7 +138,9 @@ func TestService_ExhaustedAttempts(t *testing.T) {
 		code: "abc123",
 	}
 
-	service := NewService(repo, generator, 6, 3)
+	cache := &fakeCache{}
+
+	service := NewService(repo, cache, generator, 6, 5)
 
 	_, err := service.Create(context.Background(), "https://example.com")
 

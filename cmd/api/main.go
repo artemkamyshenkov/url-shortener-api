@@ -10,11 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	rediscache "github.com/artemkamyshenkov/url-shortener-api/internal/cache/redis"
 	"github.com/artemkamyshenkov/url-shortener-api/internal/config"
 	"github.com/artemkamyshenkov/url-shortener-api/internal/httpapi"
 	"github.com/artemkamyshenkov/url-shortener-api/internal/shortener"
 	"github.com/artemkamyshenkov/url-shortener-api/internal/storage/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -45,8 +47,13 @@ func main() {
 
 	repository := postgres.NewURLRepository(pool)
 	generator := &shortener.RandomCodeGenerator{}
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAddr,
+	})
+	defer redisClient.Close()
 
-	service := shortener.NewService(repository, generator, 6, 5)
+	cache := rediscache.NewURLCache(redisClient, time.Hour)
+	service := shortener.NewService(repository, cache, generator, 6, 5)
 	handler := httpapi.NewHandler(service, cfg.BaseURL)
 
 	mux := httpapi.NewRouter(handler)
