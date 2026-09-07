@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,7 +24,7 @@ func main() {
 	cfg, err := config.Load()
 
 	if err != nil {
-		fmt.Println("error app config load: ", err)
+		slog.Error("app config load", "error", err)
 		panic(err)
 	}
 
@@ -33,11 +34,13 @@ func main() {
 
 	if err != nil {
 		cancel()
+		slog.Error("database connection failed", "error", err)
 		panic(err)
 	}
 
 	if err := pool.Ping(ctx); err != nil {
 		cancel()
+		slog.Error("database connection failed", "error", err)
 		pool.Close()
 		panic(err)
 	}
@@ -60,7 +63,7 @@ func main() {
 
 	address := fmt.Sprintf(":%d", cfg.HTTPPort)
 
-	fmt.Println("Server listening on: ", address)
+	slog.Info("starting HTTP server", "address", address)
 
 	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
@@ -69,8 +72,12 @@ func main() {
 	serveErrCh := make(chan error, 1)
 
 	server := &http.Server{
-		Addr:    address,
-		Handler: mux,
+		Addr:              address,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {
@@ -80,10 +87,10 @@ func main() {
 	select {
 	case err := <-serveErrCh:
 		if errors.Is(err, http.ErrServerClosed) {
-			fmt.Println("server closed:", err)
+			slog.Info("server closed")
 			return
 		}
-		fmt.Println("server error:", err)
+		slog.Error("server error", "error", err)
 		panic(err)
 	case <-signalCtx.Done():
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -91,7 +98,7 @@ func main() {
 		err := server.Shutdown(shutdownCtx)
 
 		if err != nil {
-			fmt.Println("shutdown error:", err)
+			slog.Error("shutdown error", "error", err)
 		}
 
 	}

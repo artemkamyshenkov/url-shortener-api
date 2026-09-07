@@ -4,10 +4,13 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func NewRouter(handler *Handler) http.Handler {
 	mux := chi.NewRouter()
+	mux.Use(middleware.RequestID)
+	mux.Use(RequestLogger)
 
 	mux.Get("/health", HealthHandler)
 	mux.Post("/api/v1/urls", handler.CreateHandler)

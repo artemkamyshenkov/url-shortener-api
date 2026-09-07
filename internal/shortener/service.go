@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 )
@@ -115,7 +116,12 @@ func (s *Service) DeleteByShortCode(ctx context.Context, shortCode string) error
 		return fmt.Errorf("delete short URL: %w", err)
 	}
 
-	_ = s.cache.Delete(ctx, shortCode)
+	if err := s.cache.Delete(ctx, shortCode); err != nil {
+		slog.Warn("failed to delete cached URL",
+			"short_code", shortCode,
+			"error", err,
+		)
+	}
 
 	return nil
 }
@@ -147,6 +153,13 @@ func (s *Service) ResolveByShortCode(ctx context.Context, shortCode string) (URL
 		return cachedURL, nil
 	}
 
+	if !errors.Is(cachedErr, ErrCacheMiss) {
+		slog.Warn("failed to get cached URL",
+			"short_code", shortCode,
+			"error", cachedErr,
+		)
+	}
+
 	url, err := s.GetByShortCode(ctx, shortCode)
 
 	if err != nil {
@@ -159,7 +172,12 @@ func (s *Service) ResolveByShortCode(ctx context.Context, shortCode string) (URL
 		return URL{}, err
 	}
 
-	_ = s.cache.Set(ctx, shortCode, url.OriginalURL)
+	if err := s.cache.Set(ctx, shortCode, url.OriginalURL); err != nil {
+		slog.Warn("failed to set cached URL",
+			"short_code", shortCode,
+			"error", err,
+		)
+	}
 
 	return url, nil
 }
